@@ -196,6 +196,7 @@ const modelsHandler = async (c: Context<{ Bindings: Env }>) => {
     headers: {
       'authorization': `Bearer ${upstreamKey.secret}`,
       'x-request-id': requestId,
+      'Accept': 'application/json',
     },
   });
 
@@ -231,13 +232,15 @@ const modelsHandler = async (c: Context<{ Bindings: Env }>) => {
   });
 
   return new Response(responseText, {
-    status: 200,
-    headers: {
-      'content-type': 'application/json',
-      'x-request-id': requestId,
-      'x-cache': 'MISS',
-    },
-  });
+    {
+    {
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': requestId,
+        'x-cache': 'MISS',
+      },
+    });
 };
 
 proxyRoutes.get('/v1/models', modelsHandler);
