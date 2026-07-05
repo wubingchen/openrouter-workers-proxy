@@ -1,3 +1,5 @@
+import type { Env } from '../../types/env';
+
 const HEADER_ALLOWLIST = [
   'accept',
   'content-type',
@@ -74,4 +76,26 @@ export function parseUsage(responseBodyText: string): {
       totalTokens: 0,
     };
   }
+}
+
+const MODELS_CACHE_KEY = 'openrouter:models:v1';
+const MODELS_CACHE_TTL_SECONDS = 600;
+
+export async function getCachedModels(env: Env): Promise<{ object: string; data: unknown[] } | null> {
+  const cached = await env.CACHE.get(MODELS_CACHE_KEY);
+  if (!cached) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(cached);
+  } catch {
+    return null;
+  }
+}
+
+export async function setCachedModels(env: Env, payload: { object: string; data: unknown[] }): Promise<void> {
+  await env.CACHE.put(MODELS_CACHE_KEY, JSON.stringify(payload), {
+    expirationTtl: MODELS_CACHE_TTL_SECONDS,
+  });
 }
