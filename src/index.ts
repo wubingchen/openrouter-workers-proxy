@@ -26,7 +26,11 @@ app.notFound(async (c) => {
     return jsonError(c, 404, '接口不存在');
   }
 
-  return c.env.ASSETS.fetch(c.req.raw);
+  const assets = c.env.ASSETS;
+  if (!assets) {
+    return jsonError(c, 500, '静态资源绑定未配置');
+  }
+  return assets.fetch(c.req.raw);
 });
 
 app.onError((error, c) => {
