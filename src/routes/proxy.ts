@@ -1,7 +1,13 @@
 import { Hono, type Context } from 'hono';
 import type { Env } from '../../types/env';
 import { requireServiceToken } from '../middleware/auth';
-import { buildUpstreamHeaders, extractModelFromBody, parseUsage } from '../services/privacy';
+import {
+  buildUpstreamHeaders,
+  extractModelFromBody,
+  getCachedModels,
+  parseUsage,
+  setCachedModels,
+} from '../services/privacy';
 import {
   appendAuditLog,
   incrementUsageDaily,
@@ -169,5 +175,72 @@ const proxyHandler = async (c: Context<{ Bindings: Env }>) => {
 
 proxyRoutes.all('/v1/*', proxyHandler);
 proxyRoutes.all('/api/v1/*', proxyHandler);
+
+const modelsHandler = async (c: Context<{ Bindings: Env }>) => {
+  const env = c.env;
+  const serviceToken = c.get('serviceToken');
+  const requestId = c.get('requestId');
+
+  const cached = await getCachedModels(env);
+  if (cached) {
+    return c.json(cached, 200, { 'x-request-id': requestId, 'x-cache': 'HIT' });
+  }
+
+  const upstreamKey = await pickUpstreamKey(env);
+  if (!upstreamKey) {
+    return jsonError(c, 503, '当前没有可用的上游 OpenRouter Key');
+  }
+
+  const upstreamResponse = await fetch('https://openrouter.ai/api/v1/models', {
+    method: 'GET',
+    headers: {
+      'authorization': `Bearer ${upstreamKey.secret}`,
+      'x-request-id': requestId,
+    },
+  });
+
+  if (!upstreamResponse.ok) {
+    return new Response(upstreamResponse.body, {
+      status: upstreamResponse.status,
+      headers: { 'x-request-id': requestId },
+    });
+  }
+
+  const responseText = await upstreamResponse.text();
+  try {
+    const payload = JSON.parse(responseText);
+    if (payload && Array.isArray(payload.data)) {
+      await setCachedModels(env, { object: payload.object ?? 'list', data: payload.data });
+    }
+  } catch {
+    // 解析失败仍然返回上游原始内容
+  }
+
+  await appendAuditLog(env, {
+    requestId,
+    actorType: 'service_token',
+    actorId: serviceToken.id,
+    tokenId: serviceToken.id,
+    eventType: 'proxy_models_listed',
+    method: 'GET',
+    path: c.req.path,
+    appName: serviceToken.appName,
+    appUrl: serviceToken.appUrl,
+    statusCode: 200,
+    message: 'Models list returned',
+  });
+
+  return new Response(responseText, {
+    status: 200,
+    headers: {
+      'content-type': 'application/json',
+      'x-request-id': requestId,
+      'x-cache': 'MISS',
+    },
+  });
+};
+
+proxyRoutes.get('/v1/models', modelsHandler);
+proxyRoutes.get('/api/v1/models', modelsHandler);
 
 export default proxyRoutes;
