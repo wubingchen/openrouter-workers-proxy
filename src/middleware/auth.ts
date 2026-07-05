@@ -12,6 +12,9 @@ function getEnv(c: { env: Env }) {
 
 export const requireAdminSession: MiddlewareHandler = async (c, next) => {
   const env = getEnv(c);
+  if (!env.CACHE) {
+    return jsonError(c, 500, 'KV 缓存未绑定，请检查 Worker 设置 → Bindings 中的 CACHE 是否正确');
+  }
   const cookieName = env.SESSION_COOKIE_NAME || 'wb_admin_session';
   const cookieValue = getCookie(c, cookieName);
 
@@ -29,13 +32,17 @@ export const requireAdminSession: MiddlewareHandler = async (c, next) => {
     return jsonError(c, 401, '管理员会话已过期');
   }
 
-  const sessionValue = await env.CACHE.get(`admin_session:${payload.sessionId}`);
-  if (!sessionValue) {
-    return jsonError(c, 401, '管理员会话不存在');
+  try {
+    const sessionValue = await env.CACHE.get(`admin_session:${payload.sessionId}`);
+    if (!sessionValue) {
+      return jsonError(c, 401, '管理员会话不存在');
+    }
+    c.set('adminSession', payload);
+    await next();
+  } catch (error) {
+    console.error('[requireAdminSession] KV error:', error);
+    return jsonError(c, 500, '会话验证失败，请检查 KV 绑定');
   }
-
-  c.set('adminSession', payload);
-  await next();
 };
 
 export const requireCsrf: MiddlewareHandler = async (c, next) => {
@@ -86,3 +93,5 @@ export const requireServiceToken: MiddlewareHandler = async (c, next) => {
   c.set('serviceToken', serviceToken);
   await next();
 };
+
+export default { requireAdminSession, requireCsrf, requireServiceToken };
