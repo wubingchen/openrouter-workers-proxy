@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenRouter 转发管理后台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div>
+          <h1>转发管理后台</h1>
+          <p>Cloudflare Workers · OpenRouter</p>
+        </div>
+        <nav>
+          <a href="#dashboard">总览</a>
+          <a href="#tokens">服务 Token</a>
+          <a href="#upstream">上游 Key 池</a>
+          <a href="#audits">审计日志</a>
+        </nav>
+        <button id="logoutBtn" class="ghost danger">退出登录</button>
+      </aside>
+      <main class="content">
+        <section id="loginCard" class="panel auth-panel">
+          <h2>管理员登录</h2>
+          <p>请输入部署时设置的管理员引导 Token。登录后会签发短期安全会话。</p>
+          <form id="loginForm" class="stack-form">
+            <label>
+              <span>管理员引导 Token</span>
+              <input id="bootstrapToken" type="password" placeholder="请输入 bootstrap token" required />
+            </label>
+            <button type="submit">登录后台</button>
+          </form>
+        </section>
+
+        <div id="dashboardApp" class="hidden">
+          <section id="dashboard" class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>系统总览</h2>
+                <p>查看服务 Token、上游 Key、审计日志和总 token 消耗。</p>
+              </div>
+              <span id="loginStatus" class="badge">未登录</span>
+            </div>
+            <div id="summaryGrid" class="summary-grid"></div>
+          </section>
+
+          <section id="tokens" class="panel split">
+            <div>
+              <div class="panel-header">
+                <div>
+                  <h2>服务 Token 管理</h2>
+                  <p>Token 与应用来源绑定，避免来源字段被客户端伪造。</p>
+                </div>
+              </div>
+              <form id="tokenForm" class="stack-form two-col">
+                <label><span>显示名称</span><input name="name" required placeholder="例如：生产环境 Web" /></label>
+                <label><span>应用名称</span><input name="appName" required placeholder="例如：my-app" /></label>
+                <label><span>应用地址</span><input name="appUrl" required placeholder="https://app.example.com" /></label>
+                <label><span>每分钟限流</span><input name="rateLimitPerMinute" type="number" min="1" max="600" value="60" /></label>
+                <label><span>日请求上限</span><input name="dailyRequestLimit" type="number" min="1" max="1000000" value="10000" /></label>
+                <label class="full"><span>备注</span><textarea name="notes" rows="2" placeholder="给自己看的说明"></textarea></label>
+                <div class="full actions"><button type="submit">创建服务 Token</button></div>
+              </form>
+              <div id="tokenReveal" class="reveal hidden"></div>
+            </div>
+            <div>
+              <h3>已签发 Token</h3>
+              <div id="tokenList" class="list"></div>
+            </div>
+          </section>
+
+          <section id="upstream" class="panel split">
+            <div>
+              <div class="panel-header">
+                <div>
+                  <h2>OpenRouter Key 池</h2>
+                  <p>上游 Key 在数据库中加密存储，前端不会再读回明文。</p>
+                </div>
+              </div>
+              <form id="upstreamKeyForm" class="stack-form">
+                <label><span>Key 标签</span><input name="label" required placeholder="例如：主账号 key" /></label>
+                <label><span>OpenRouter Key</span><input name="key" type="password" required placeholder="sk-or-v1-..." /></label>
+                <label><span>权重</span><input name="weight" type="number" min="1" max="100" value="1" /></label>
+                <button type="submit">添加上游 Key</button>
+              </form>
+            </div>
+            <div>
+              <h3>Key 状态</h3>
+              <div id="upstreamKeyList" class="list"></div>
+            </div>
+          </section>
+
+          <section id="audits" class="panel split-wide">
+            <div>
+              <div class="panel-header">
+                <div>
+                  <h2>审计日志</h2>
+                  <p>记录来源、模型、状态码与 token 用量，便于追溯。</p>
+                </div>
+                <button id="refreshBtn" class="ghost">刷新数据</button>
+              </div>
+              <div id="auditList" class="table-wrap"></div>
+            </div>
+            <div>
+              <h3>用量汇总</h3>
+              <div id="usageList" class="table-wrap"></div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+    <div id="toast" class="toast hidden"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
