@@ -1,0 +1,24 @@
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -20,9 +20,12 @@
+   app.route('/api/admin', adminRoutes);
+   app.route('/', proxyRoutes);
+ 
+   app.notFound(async (c) => {
+-    if (c.req.path.startsWith('/api/')) {
+-      return jsonError(c, 404, '接口不存在');
+-    }
+-
+-    return c.env.ASSETS.fetch(c.req.raw);
++    if (c.req.path.startsWith('/api/')) {
++      return jsonError(c, 404, '接口不存在');
++    }
++
++    const assets = c.env.ASSETS;
++    if (!assets) {
++      return jsonError(c, 500, '静态资源绑定未配置');
++    }
++    return assets.fetch(c.req.raw);
+   });
+ 
+   app.onError((error, c) => {
