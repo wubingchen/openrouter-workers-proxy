@@ -175,7 +175,6 @@ const proxyHandler = async (c: Context<{ Bindings: Env }>) => {
 
 proxyRoutes.all('/v1/*', proxyHandler);
 proxyRoutes.all('/api/v1/*', proxyHandler);
-
 const modelsHandler = async (c: Context<{ Bindings: Env }>) => {
   const env = c.env;
   const serviceToken = c.get('serviceToken');
@@ -183,35 +182,8 @@ const modelsHandler = async (c: Context<{ Bindings: Env }>) => {
 
   const cached = await getCachedModels(env);
   if (cached) {
-    return c.json(cached, 200, { 'application/json:///return: test: false, 
-
-          // This is a comment that needs to be removed. 
-          // Also fix the formatting.
-          // The following lines are incorrect and should be removed:
-          // { 
-          // {
-          // status: 200,
-          // headers: {
-          //   'content-type': 'application/json',
-          //   'x-request-id': requestId,
-          //   'x-cache': 'MISS',
-          // },
-          // });
-          // End of incorrect block.
-
-          // Correct return statement:
-          return new Response(responseText, {
-            status: 200,
-            headers: {
-              'content-type': 'application/json',
-              'x-request-id': requestId,
-              'x-cache': 'MISS',
-            },
-          });
-        };
-      };
-    }
-  };
+    return c.json(cached, 200, { 'x-request-id': requestId, 'x-cache': 'HIT' });
+  }
 
   const upstreamKey = await pickUpstreamKey(env);
   if (!upstreamKey) {
@@ -267,7 +239,6 @@ const modelsHandler = async (c: Context<{ Bindings: Env }>) => {
     },
   });
 };
-
 proxyRoutes.get('/v1/models', modelsHandler);
 proxyRoutes.get('/api/v1/models', modelsHandler);
 
